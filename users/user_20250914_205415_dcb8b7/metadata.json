@@ -1,0 +1,18 @@
+[
+  {
+    "subject_id": "S1",
+    "age": 25,
+    "gender": "F",
+    "label": "resting",
+    "eeg_files": [],
+    "eeg_type": null
+  },
+  {
+    "subject_id": "S2",
+    "age": 30,
+    "gender": "M",
+    "label": "task",
+    "eeg_files": [],
+    "eeg_type": null
+  }
+]

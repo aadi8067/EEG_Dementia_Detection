@@ -1,0 +1,13 @@
+{
+  "gender": "M",
+  "age": 25,
+  "group": "Control",
+  "mmse": 30,
+  "trial_type": "Rest",
+  "task": "EC",
+  "subject_id": "S01",
+  "eeg_files": [
+    "users\\user_20250914_202403_29bcfb\\eeg_files\\dummy_test.npy"
+  ],
+  "eeg_type": "edf"
+}

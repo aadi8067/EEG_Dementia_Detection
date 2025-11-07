@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroMind | EEG Data Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <img src="https://cdn-icons-png.flaticon.com/512/4228/4228733.png" alt="EEG Logo">
+      <h1>NeuroMind | EEG-Based Dementia Detection System</h1>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#home" class="active">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#upload">Upload</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="home" class="hero">
+    <div class="hero-content">
+      <h2>Welcome to <span>NeuroMind</span></h2>
+      <p>Manage, process, and visualize EEG data effortlessly using AI-driven technology.</p>
+      <a href="#upload" class="btn">Get Started</a>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="about">
+    <h2>About Our Project</h2>
+    <p>
+      NeuroTrack is a smart EEG data management and visualization platform built using Flask.
+      It helps researchers upload metadata, process EEG signals, and manage datasets with ease.
+    </p>
+    <div class="features">
+      <div class="feature-card">
+        <img src="https://cdn-icons-png.flaticon.com/512/3209/3209023.png" alt="Secure">
+        <h3>Secure Uploads</h3>
+        <p>Keep your EEG files and metadata safe and organized.</p>
+      </div>
+      <div class="feature-card">
+        <img src="https://cdn-icons-png.flaticon.com/512/2359/2359380.png" alt="Processing">
+        <h3>Automated Processing</h3>
+        <p>EEG files are automatically converted into structured .npy format.</p>
+      </div>
+      <div class="feature-card">
+        <img src="https://cdn-icons-png.flaticon.com/512/1005/1005141.png" alt="Insights">
+        <h3>Instant Insights</h3>
+        <p>Analyze and visualize EEG data instantly from your dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Upload Section -->
+  <section id="upload" class="upload">
+    <h2>Upload Your Data</h2>
+
+    <!-- Metadata Upload Form -->
+    <form id="metadataForm" enctype="multipart/form-data">
+      <label>Upload Metadata File (.csv or .json):</label>
+      <input type="file" name="metadata" required />
+      <button type="submit" class="btn">Upload Metadata</button>
+    </form>
+    <pre id="metadataOutput"></pre>
+
+    <hr>
+
+    <!-- EEG Type Form -->
+    <form id="eegTypeForm">
+      <label>Enter User ID:</label>
+      <input type="text" id="user_id_type" placeholder="Enter user_id" required />
+      <label>Select EEG Type:</label>
+      <select id="eeg_type" required>
+        <option value="edf">EDF</option>
+        <option value="csv">CSV</option>
+        <option value="set">SET</option>
+      </select>
+      <button type="submit" class="btn">Set EEG Type</button>
+    </form>
+    <pre id="eegTypeOutput"></pre>
+
+    <hr>
+
+    <!-- EEG File Upload Form -->
+    <form id="eegForm" enctype="multipart/form-data">
+      <label>Enter User ID:</label>
+      <input type="text" id="user_id_eeg" placeholder="Enter user_id" required />
+      <label>Upload EEG Files:</label>
+      <input type="file" id="eeg_files" name="eeg" multiple required />
+      <button type="submit" class="btn">Upload EEG Files</button>
+    </form>
+    <pre id="eegOutput"></pre>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="contact">
+    <h2>Contact Us</h2>
+    <p>Have questions or feedback? We'd love to hear from you.</p>
+    <form id="contactForm">
+      <input type="text" id="name" placeholder="Your Name" required />
+      <input type="email" id="email" placeholder="Your Email" required />
+      <textarea id="message" placeholder="Your Message" required></textarea>
+      <button type="submit" class="btn">Send Message</button>
+    </form>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 NeuroMind | EEG Data Management System | All Rights Reserved</p>
+  </footer>
+
+  <!-- Functional Script -->
+  <script>
+    // Handle Metadata Upload
+    document.getElementById('metadataForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const res = await fetch('/metadata', { method: 'POST', body: formData });
+      const data = await res.json();
+      document.getElementById('metadataOutput').textContent = JSON.stringify(data, null, 2);
+    };
+
+    // Handle EEG Type Setting
+    document.getElementById('eegTypeForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('user_id_type').value.trim();
+      const eegType = document.getElementById('eeg_type').value;
+      const res = await fetch(`/eeg_types/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eeg_type: eegType }),
+      });
+      const data = await res.json();
+      document.getElementById('eegTypeOutput').textContent = JSON.stringify(data, null, 2);
+    };
+
+    // Handle EEG File Upload
+    document.getElementById('eegForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('user_id_eeg').value.trim();
+      const files = document.getElementById('eeg_files').files;
+      const formData = new FormData();
+      for (let file of files) formData.append('eeg', file);
+      const res = await fetch(`/eegs/${userId}`, { method: 'POST', body: formData });
+      const data = await res.json();
+      document.getElementById('eegOutput').textContent = JSON.stringify(data, null, 2);
+    };
+  </script>
+</body>
+</html>

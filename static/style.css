@@ -1,0 +1,199 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  color: #333;
+  background-color: #f8f9fc;
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo img {
+  width: 45px;
+  margin-right: 10px;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 25px;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+nav a:hover,
+nav a.active {
+  color: #ffd700;
+}
+
+/* Hero */
+.hero {
+  background: url('https://cdn.pixabay.com/photo/2020/06/30/05/13/brain-5351376_1280.jpg') center/cover no-repeat;
+  color: white;
+  text-align: center;
+  padding: 120px 20px;
+}
+
+.hero-content {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 40px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.hero h2 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.hero span {
+  color: #ffd700;
+}
+
+.btn {
+  display: inline-block;
+  background: #6366f1;
+  color: white;
+  padding: 10px 25px;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: #4f46e5;
+}
+
+/* About */
+.about {
+  padding: 80px 50px;
+  text-align: center;
+  background: white;
+}
+
+.about h2 {
+  margin-bottom: 20px;
+  color: #4f46e5;
+}
+
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+.feature-card {
+  background: #f3f4f6;
+  padding: 20px;
+  border-radius: 10px;
+  width: 280px;
+  transition: transform 0.3s, background 0.3s;
+}
+
+.feature-card:hover {
+  background: #e0e7ff;
+  transform: translateY(-5px);
+}
+
+.feature-card img {
+  width: 60px;
+  margin-bottom: 10px;
+}
+
+/* Upload */
+.upload {
+  padding: 70px 50px;
+  background: #f9fafb;
+}
+
+.upload h2 {
+  text-align: center;
+  color: #4f46e5;
+  margin-bottom: 20px;
+}
+
+form {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px auto;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+form label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+pre {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 10px;
+  border-radius: 5px;
+  width: 80%;
+  margin: 10px auto;
+  overflow-x: auto;
+}
+
+/* Contact */
+.contact {
+  padding: 70px 50px;
+  background: white;
+  text-align: center;
+}
+
+.contact h2 {
+  color: #4f46e5;
+  margin-bottom: 10px;
+}
+
+.contact form {
+  margin-top: 20px;
+}
+
+/* Footer */
+footer {
+  background: #111827;
+  color: #d1d5db;
+  text-align: center;
+  padding: 15px;
+}

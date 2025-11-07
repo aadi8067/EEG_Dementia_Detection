@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload EEG Data</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+  <header>
+    <h1>EEG Data Upload</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/upload">Upload</a>
+      <a href="/about">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Upload Metadata</h2>
+      <form id="metadataForm" enctype="multipart/form-data">
+        <input type="file" name="metadata" accept=".json,.csv" required>
+        <button type="submit">Upload Metadata</button>
+      </form>
+      <pre id="metadataResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Set EEG Type</h2>
+      <input type="text" id="userIdType" placeholder="Enter User ID">
+      <select id="eegType">
+        <option value="">Select Type</option>
+        <option value="edf">EDF</option>
+        <option value="csv">CSV</option>
+        <option value="set">SET</option>
+      </select>
+      <button onclick="setEEGType()">Submit</button>
+      <pre id="typeResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Upload EEG Files</h2>
+      <form id="eegForm" enctype="multipart/form-data">
+        <input type="text" id="userIdEEG" name="user_id" placeholder="Enter User ID" required>
+        <input type="file" id="eegFiles" name="eeg" multiple required>
+        <button type="submit">Upload EEG</button>
+      </form>
+      <pre id="eegResult"></pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>EEG Backend System © 2025</p>
+  </footer>
+</body>
+</html>
