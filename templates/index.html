@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
   <!-- Header -->
   <header>
@@ -102,11 +104,11 @@
     <hr>
 
     <!-- Filter Processing Section (Layer2) -->
-    <h2 style="margin-top: 40px;">Apply Filters to EEG Data</h2>
+    <h2 style="margin-top: 40px;">Layer 2: Apply Filters to EEG Data</h2>
     <form id="filterForm" enctype="multipart/form-data">
       <label>Upload CSV or XLSX File:</label>
       <input type="file" id="filter_file" name="data" accept=".csv,.xlsx" required />
-      
+
       <label>Select Filter(s):</label>
       <div class="custom-dropdown">
         <div class="dropdown-header" id="filterDropdownHeader">
@@ -131,10 +133,191 @@
           </label>
         </div>
       </div>
-      
+
       <button type="submit" class="btn">Process & Download</button>
     </form>
     <pre id="filterOutput"></pre>
+
+    <hr>
+
+    <!-- ML Training & Testing Section (Layer3) -->
+    <section id="layer3" class="layer3-section">
+      <div class="layer3-header">
+        <h2>ML Model Training & Testing</h2>
+        <p class="layer3-subtitle">Train and test machine learning models on your processed EEG data</p>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="layer3-tabs">
+        <button class="layer3-tab-btn active" onclick="switchLayer3Tab('train')">
+          Train Models
+        </button>
+        <button class="layer3-tab-btn" onclick="switchLayer3Tab('test')">
+          Test Models
+        </button>
+      </div>
+
+      <!-- Training Tab -->
+      <div id="layer3TrainTab" class="layer3-tab-content active">
+        <!-- Training Data Upload -->
+        <div class="layer3-card">
+          <div class="layer3-card-header">
+            <h3>📊 Training Data</h3>
+            <p>Upload training CSV</p>
+          </div>
+          <div class="layer3-card-body">
+            <div class="layer3-file-upload">
+              <input type="file" id="train_data_file" accept=".csv" style="display: none;" />
+              <button class="layer3-file-btn" onclick="document.getElementById('train_data_file').click()">
+                Choose File
+              </button>
+              <span id="trainFileName" class="layer3-file-name">No file chosen</span>
+            </div>
+            <small class="layer3-hint">Upload a CSV file with features and a Label column</small>
+          </div>
+        </div>
+
+        <!-- Model Configuration -->
+        <div class="layer3-card">
+          <div class="layer3-card-header">
+            <h3>⚙️ Model Configuration</h3>
+          </div>
+          <div class="layer3-card-body">
+            <div class="layer3-form-row">
+              <div class="layer3-form-group">
+                <label>User ID:</label>
+                <input type="text" id="ml_user_id_train" placeholder="Enter user_id" value="user123" />
+              </div>
+              <div class="layer3-form-group">
+                <label>Target Column:</label>
+                <input type="text" id="train_target_column" value="Label" />
+              </div>
+            </div>
+
+            <div class="layer3-form-row">
+              <div class="layer3-form-group full-width">
+                <label>Select Model:</label>
+                <select id="train_model_select">
+                  <option value="all">All Models</option>
+                  <optgroup label="Classification">
+                    <option value="logistic">Logistic Regression</option>
+                    <option value="rf_classifier">Random Forest Classifier</option>
+                    <option value="knn">K-Nearest Neighbors</option>
+                    <option value="svm">Support Vector Machine</option>
+                  </optgroup>
+                  <optgroup label="Regression">
+                    <option value="linear">Linear Regression</option>
+                    <option value="rf_regressor">Random Forest Regressor</option>
+                    <option value="dt_regressor">Decision Tree Regressor</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <div class="layer3-form-row">
+              <div class="layer3-form-group">
+                <label>Train %:</label>
+                <input type="number" id="train_percent" value="80" min="1" max="99" />
+              </div>
+              <div class="layer3-form-group">
+                <label>Test %:</label>
+                <input type="number" id="test_percent" value="20" min="1" max="99" />
+              </div>
+              <div class="layer3-form-group">
+                <label>Random State:</label>
+                <input type="number" id="random_state" value="42" />
+              </div>
+            </div>
+
+            <button class="layer3-btn layer3-btn-primary" onclick="trainModel()">
+              🚀 Train Model
+            </button>
+          </div>
+        </div>
+
+        <!-- Training Results -->
+        <div id="trainResults" class="layer3-card" style="display: none;">
+          <div class="layer3-card-header">
+            <h3>📈 Training Results</h3>
+          </div>
+          <div class="layer3-card-body">
+            <div id="trainMetricsDisplay"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testing Tab -->
+      <div id="layer3TestTab" class="layer3-tab-content">
+        <!-- Test Data Upload -->
+        <div class="layer3-card">
+          <div class="layer3-card-header">
+            <h3>📊 Test Data</h3>
+            <p>Upload test CSV</p>
+          </div>
+          <div class="layer3-card-body">
+            <div class="layer3-file-upload">
+              <input type="file" id="test_data_file" accept=".csv" style="display: none;" />
+              <button class="layer3-file-btn" onclick="document.getElementById('test_data_file').click()">
+                Choose File
+              </button>
+              <span id="testFileName" class="layer3-file-name">No file chosen</span>
+            </div>
+            <small class="layer3-hint">Upload a CSV file with the same features</small>
+          </div>
+        </div>
+
+        <!-- Test Configuration -->
+        <div class="layer3-card">
+          <div class="layer3-card-header">
+            <h3>🔍 Test Configuration</h3>
+          </div>
+          <div class="layer3-card-body">
+            <div class="layer3-form-row">
+              <div class="layer3-form-group">
+                <label>User ID:</label>
+                <input type="text" id="ml_user_id_test" placeholder="Enter user_id" value="user123" />
+              </div>
+              <div class="layer3-form-group">
+                <label>Target Column (optional):</label>
+                <input type="text" id="test_target_column" value="Label" />
+              </div>
+              <div class="layer3-form-group">
+                <label>Select Model:</label>
+                <select id="test_model_select">
+                  <option value="all">All Models</option>
+                  <optgroup label="Classification">
+                    <option value="logistic">Logistic Regression</option>
+                    <option value="rf_classifier">Random Forest Classifier</option>
+                    <option value="knn">K-Nearest Neighbors</option>
+                    <option value="svm">Support Vector Machine</option>
+                  </optgroup>
+                  <optgroup label="Regression">
+                    <option value="linear">Linear Regression</option>
+                    <option value="rf_regressor">Random Forest Regressor</option>
+                    <option value="dt_regressor">Decision Tree Regressor</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <button class="layer3-btn layer3-btn-primary" onclick="testModel()">
+              🧪 Test Model
+            </button>
+          </div>
+        </div>
+
+        <!-- Test Results -->
+        <div id="testResults" class="layer3-card" style="display: none;">
+          <div class="layer3-card-header">
+            <h3>🎯 Test Results</h3>
+          </div>
+          <div class="layer3-card-body">
+            <div id="testMetricsDisplay"></div>
+            <div id="predictionsDisplay"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </section>
 
   <!-- Contact -->
@@ -154,8 +337,492 @@
     <p>© 2025 NeuroMind | EEG Data Management System | All Rights Reserved</p>
   </footer>
 
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+  <!-- Layer3 Styles -->
+  <style>
+    .layer3-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 60px 40px;
+      border-radius: 20px;
+      margin: 40px 0;
+      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+    }
+
+    .layer3-header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    .layer3-header h2 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: white !important;
+    }
+
+    .layer3-subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      color: white !important;
+    }
+
+    .layer3-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .layer3-tab-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .layer3-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .layer3-tab-btn.active {
+      background: white;
+      color: #667eea;
+      border-color: white;
+    }
+
+    .layer3-tab-content {
+      display: none;
+    }
+
+    .layer3-tab-content.active {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .layer3-card {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .layer3-card-header {
+      margin-bottom: 20px;
+    }
+
+    .layer3-card-header h3 {
+      color: #2c3e50;
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .layer3-card-header p {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .layer3-card-body {
+      color: #34495e;
+    }
+
+    .layer3-file-upload {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .layer3-file-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .layer3-file-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .layer3-file-name {
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+
+    .layer3-hint {
+      color: #95a5a6;
+      font-size: 13px;
+    }
+
+    .layer3-form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .layer3-form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .layer3-form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .layer3-form-group label {
+      color: #2c3e50;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .layer3-form-group input,
+    .layer3-form-group select {
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .layer3-form-group input:focus,
+    .layer3-form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .layer3-btn {
+      padding: 15px 40px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .layer3-btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .layer3-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .layer3-model-result-card {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+      border-left: 5px solid #667eea;
+      transition: all 0.3s ease;
+    }
+
+    .layer3-model-result-card:hover {
+      box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .layer3-model-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .layer3-model-icon {
+      font-size: 40px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+    }
+
+    .layer3-model-info {
+      flex: 1;
+    }
+
+    .layer3-model-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin: 0 0 5px 0;
+    }
+
+    .layer3-model-type {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin: 0;
+    }
+
+    .layer3-metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .layer3-metric-item {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .layer3-metric-item:hover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      transform: scale(1.05);
+    }
+
+    .layer3-metric-item:hover .layer3-metric-label-small,
+    .layer3-metric-item:hover .layer3-metric-value-large {
+      color: white;
+    }
+
+    .layer3-metric-icon-small {
+      font-size: 24px;
+      opacity: 0.8;
+    }
+
+    .layer3-metric-content {
+      flex: 1;
+    }
+
+    .layer3-metric-label-small {
+      font-size: 12px;
+      color: #7f8c8d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+
+    .layer3-metric-value-large {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+
+    .layer3-predictions-card {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+      border-left: 5px solid #28a745;
+    }
+
+    .layer3-predictions-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .layer3-pred-icon {
+      font-size: 32px;
+    }
+
+    .layer3-predictions-header h4 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .layer3-predictions-content {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .layer3-predictions-sample strong {
+      color: #7f8c8d;
+      font-size: 14px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .layer3-predictions-values {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .layer3-pred-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-block;
+      box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+    }
+
+    .layer3-pred-more {
+      color: #7f8c8d;
+      font-size: 18px;
+      padding: 8px 15px;
+    }
+
+    .layer3-predictions-stats {
+      display: flex;
+      gap: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .layer3-stat-item {
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+
+    .layer3-stat-item strong {
+      color: #2c3e50;
+      font-size: 18px;
+    }
+
+    .layer3-results-header {
+      text-align: center;
+      margin: 30px 0 20px 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      color: white;
+    }
+
+    .layer3-results-header h3 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .layer3-results-header p {
+      margin: 5px 0 0 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+  </style>
+
   <!-- Functional Script -->
   <script>
+    // Layer3 Tab Switching
+    function switchLayer3Tab(tab) {
+      const tabs = document.querySelectorAll('.layer3-tab-btn');
+      const contents = document.querySelectorAll('.layer3-tab-content');
+
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+
+      if (tab === 'train') {
+        tabs[0].classList.add('active');
+        document.getElementById('layer3TrainTab').classList.add('active');
+      } else {
+        tabs[1].classList.add('active');
+        document.getElementById('layer3TestTab').classList.add('active');
+      }
+    }
+
+    // File name display
+    document.getElementById('train_data_file').addEventListener('change', function (e) {
+      const fileName = e.target.files[0]?.name || 'No file chosen';
+      document.getElementById('trainFileName').textContent = fileName;
+    });
+
+    document.getElementById('test_data_file').addEventListener('change', function (e) {
+      const fileName = e.target.files[0]?.name || 'No file chosen';
+      document.getElementById('testFileName').textContent = fileName;
+    });
+
+    // Toast Notification Function
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.style.cssText = `
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        padding: 16px 24px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+        min-width: 300px;
+        font-size: 14px;
+      `;
+      toast.textContent = message;
+
+      const container = document.getElementById('toastContainer');
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // ========== EXISTING FUNCTIONALITY ==========
     // Handle Metadata Upload
     document.getElementById('metadataForm').onsubmit = async (e) => {
       e.preventDefault();
@@ -194,7 +861,7 @@
     // Handle Custom Dropdown Toggle
     const dropdownHeader = document.getElementById('filterDropdownHeader');
     const dropdownContent = document.getElementById('filterDropdownContent');
-    
+
     dropdownHeader.addEventListener('click', () => {
       dropdownContent.classList.toggle('show');
     });
@@ -225,7 +892,7 @@
       const allFilters = document.getElementById('all_filters');
       const checkboxes = document.querySelectorAll('input[name="filter"]:checked:not(#all_filters)');
       const text = document.getElementById('filterDropdownText');
-      
+
       if (allFilters.checked) {
         text.textContent = 'Apply All Filters';
       } else if (checkboxes.length === 0) {
@@ -240,7 +907,7 @@
     // Handle Filter Processing
     document.getElementById('filterForm').onsubmit = async (e) => {
       e.preventDefault();
-      
+
       const file = document.getElementById('filter_file').files[0];
       if (!file) {
         alert('Please select a file');
@@ -250,7 +917,7 @@
       // Get selected filters from checkboxes
       const checkboxes = document.querySelectorAll('input[name="filter"]:checked');
       const selectedFilters = Array.from(checkboxes).map(cb => cb.value);
-      
+
       // If "all" is selected or nothing selected, use "all"
       let filters = 'all';
       if (selectedFilters.length > 0 && !selectedFilters.includes('all')) {
@@ -263,7 +930,7 @@
 
       try {
         document.getElementById('filterOutput').textContent = 'Processing... Please wait.';
-        
+
         const res = await fetch('/apply_filter', {
           method: 'POST',
           body: formData
@@ -280,7 +947,7 @@
           a.click();
           a.remove();
           window.URL.revokeObjectURL(url);
-          
+
           document.getElementById('filterOutput').textContent = 'Success! File downloaded.';
         } else {
           const error = await res.json();
@@ -290,6 +957,401 @@
         document.getElementById('filterOutput').textContent = 'Error: ' + error.message;
       }
     };
+
+    // ========== LAYER 3: ML TRAINING & TESTING ==========
+
+    // Helper function to parse CSV
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const data = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',');
+        const row = {};
+        headers.forEach((header, index) => {
+          const value = values[index]?.trim();
+          // Try to convert to number if possible
+          row[header] = isNaN(value) ? value : parseFloat(value);
+        });
+        data.push(row);
+      }
+      return data;
+    }
+
+    // Display metrics in a professional format
+    function displayMetrics(metrics, containerId, modelName = '') {
+      const container = document.getElementById(containerId);
+
+      if (modelName) {
+        // Create a separate card for each model
+        const modelCard = document.createElement('div');
+        modelCard.className = 'layer3-model-result-card';
+
+        // Model header with icon
+        const modelIcon = getModelIcon(modelName);
+        const modelHeader = `
+          <div class="layer3-model-header">
+            <div class="layer3-model-icon">${modelIcon}</div>
+            <div class="layer3-model-info">
+              <h3 class="layer3-model-name">${formatModelName(modelName)}</h3>
+              <p class="layer3-model-type">${getModelType(modelName)}</p>
+            </div>
+          </div>
+        `;
+
+        // Metrics grid
+        let metricsHtml = '<div class="layer3-metrics-row">';
+        for (const [key, value] of Object.entries(metrics)) {
+          const displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+          const percentage = key.includes('pct') ? '%' : '';
+          const icon = getMetricIcon(key);
+
+          metricsHtml += `
+            <div class="layer3-metric-item">
+              <div class="layer3-metric-icon-small">${icon}</div>
+              <div class="layer3-metric-content">
+                <div class="layer3-metric-label-small">${formatMetricName(key)}</div>
+                <div class="layer3-metric-value-large">${displayValue}${percentage}</div>
+              </div>
+            </div>
+          `;
+        }
+        metricsHtml += '</div>';
+
+        modelCard.innerHTML = modelHeader + metricsHtml;
+        container.appendChild(modelCard);
+      } else {
+        // If no model name, display simple grid
+        let html = '<div class="layer3-metrics-row">';
+        for (const [key, value] of Object.entries(metrics)) {
+          const displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+          const percentage = key.includes('pct') ? '%' : '';
+          html += `
+            <div class="layer3-metric-item">
+              <div class="layer3-metric-label-small">${formatMetricName(key)}</div>
+              <div class="layer3-metric-value-large">${displayValue}${percentage}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+        container.innerHTML += html;
+      }
+    }
+
+    // Helper functions for better display
+    function formatModelName(name) {
+      const names = {
+        'logistic': 'Logistic Regression',
+        'linear': 'Linear Regression',
+        'rf_classifier': 'Random Forest Classifier',
+        'rf_regressor': 'Random Forest Regressor',
+        'dt_regressor': 'Decision Tree Regressor',
+        'knn': 'K-Nearest Neighbors',
+        'svm': 'Support Vector Machine',
+        'LogisticRegression': 'Logistic Regression',
+        'LinearRegression': 'Linear Regression',
+        'RandomForestClassifier': 'Random Forest Classifier',
+        'RandomForestRegressor': 'Random Forest Regressor',
+        'DecisionTreeRegressor': 'Decision Tree Regressor',
+        'KNeighborsClassifier': 'K-Nearest Neighbors',
+        'SVM': 'Support Vector Machine'
+      };
+      return names[name] || name;
+    }
+
+    function getModelType(name) {
+      const classifiers = ['logistic', 'rf_classifier', 'knn', 'svm'];
+      const regressors = ['linear', 'rf_regressor', 'dt_regressor'];
+
+      if (classifiers.includes(name)) return 'Classification Model';
+      if (regressors.includes(name)) return 'Regression Model';
+      return 'Machine Learning Model';
+    }
+
+    function getModelIcon(name) {
+      const icons = {
+        'logistic': '📈',
+        'linear': '📉',
+        'rf_classifier': '🌲',
+        'rf_regressor': '🌳',
+        'dt_regressor': '🌿',
+        'knn': '🎯',
+        'svm': '⚡'
+      };
+      return icons[name] || '🤖';
+    }
+
+    function getMetricIcon(key) {
+      if (key.includes('accuracy')) return '🎯';
+      if (key.includes('precision')) return '🔍';
+      if (key.includes('recall')) return '📊';
+      if (key.includes('f1')) return '⚖️';
+      if (key.includes('r2')) return '📈';
+      if (key.includes('rmse')) return '📏';
+      if (key.includes('mae')) return '📐';
+      return '📊';
+    }
+
+    function formatMetricName(key) {
+      const names = {
+        'accuracy_pct': 'Accuracy',
+        'precision_pct': 'Precision',
+        'recall_pct': 'Recall',
+        'f1_pct': 'F1 Score',
+        'r2': 'R² Score',
+        'rmse': 'RMSE',
+        'mae': 'MAE'
+      };
+      return names[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    // Handle ML Model Training
+    async function trainModel() {
+      const userId = document.getElementById('ml_user_id_train').value.trim();
+      if (!userId) {
+        showToast('Please enter a User ID', 'error');
+        return;
+      }
+
+      const file = document.getElementById('train_data_file').files[0];
+      if (!file) {
+        showToast('Please select a training data file', 'error');
+        return;
+      }
+
+      const targetColumn = document.getElementById('train_target_column').value.trim();
+      const model = document.getElementById('train_model_select').value;
+      const trainPercent = parseFloat(document.getElementById('train_percent').value);
+      const testPercent = parseFloat(document.getElementById('test_percent').value);
+      const randomState = parseInt(document.getElementById('random_state').value);
+
+      if (Math.abs(trainPercent + testPercent - 100) > 0.01) {
+        showToast('Train % and Test % must sum to 100', 'error');
+        return;
+      }
+
+      try {
+        showToast('Reading training data...', 'info');
+        const text = await file.text();
+        const data = parseCSV(text);
+
+        showToast(`Training ${model === 'all' ? 'all models' : model}... This may take a moment.`, 'info');
+        document.getElementById('trainMetricsDisplay').innerHTML = '<p style="text-align:center; color:#667eea;">Training in progress...</p>';
+        document.getElementById('trainResults').style.display = 'block';
+
+        const response = await fetch('/train_ml_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: data,
+            model: model,
+            target_column: targetColumn,
+            train_percent: trainPercent,
+            test_percent: testPercent,
+            random_state: randomState,
+            user_id: userId
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          const metricsContainer = document.getElementById('trainMetricsDisplay');
+          metricsContainer.innerHTML = '';
+
+          // Add results header
+          const headerHtml = `
+            <div class="layer3-results-header">
+              <h3>🎉 Training Complete!</h3>
+              <p>Models trained successfully with your data</p>
+            </div>
+          `;
+          metricsContainer.innerHTML = headerHtml;
+
+          // Display metrics
+          if (model === 'all') {
+            showToast('✅ All models trained successfully!', 'success');
+            let successCount = 0;
+            for (const [modelName, modelResult] of Object.entries(result)) {
+              if (modelResult.error) {
+                showToast(`${modelName}: ${modelResult.error}`, 'error');
+                continue;
+              }
+              if (modelResult.metrics) {
+                displayMetrics(modelResult.metrics, 'trainMetricsDisplay', modelName);
+                successCount++;
+              }
+            }
+            // Update header with count
+            if (successCount > 0) {
+              metricsContainer.querySelector('.layer3-results-header p').textContent =
+                `${successCount} models trained successfully`;
+            }
+          } else {
+            showToast(`✅ ${model} trained successfully!`, 'success');
+            if (result.metrics) {
+              displayMetrics(result.metrics, 'trainMetricsDisplay', model);
+            }
+          }
+        } else {
+          showToast(`Training failed: ${result.error || 'Unknown error'}`, 'error');
+          document.getElementById('trainMetricsDisplay').innerHTML = `<p style="color:red;">${result.error}</p>`;
+        }
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+        document.getElementById('trainMetricsDisplay').innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+      }
+    }
+
+    // Handle ML Model Testing
+    async function testModel() {
+      const userId = document.getElementById('ml_user_id_test').value.trim();
+      if (!userId) {
+        showToast('Please enter a User ID', 'error');
+        return;
+      }
+
+      const file = document.getElementById('test_data_file').files[0];
+      if (!file) {
+        showToast('Please select a test data file', 'error');
+        return;
+      }
+
+      const targetColumn = document.getElementById('test_target_column').value.trim();
+      const model = document.getElementById('test_model_select').value;
+
+      try {
+        showToast('Reading test data...', 'info');
+        const text = await file.text();
+        const data = parseCSV(text);
+
+        showToast(`Testing ${model === 'all' ? 'all models' : model}...`, 'info');
+        document.getElementById('testMetricsDisplay').innerHTML = '<p style="text-align:center; color:#667eea;">Testing in progress...</p>';
+        document.getElementById('predictionsDisplay').innerHTML = '';
+        document.getElementById('testResults').style.display = 'block';
+
+        const response = await fetch('/test_ml_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: data,
+            model: model,
+            target_column: targetColumn,
+            user_id: userId
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          const metricsContainer = document.getElementById('testMetricsDisplay');
+          const predsContainer = document.getElementById('predictionsDisplay');
+          metricsContainer.innerHTML = '';
+          predsContainer.innerHTML = '';
+
+          // Add results header
+          const headerHtml = `
+            <div class="layer3-results-header">
+              <h3>🎯 Testing Complete!</h3>
+              <p>Predictions generated successfully</p>
+            </div>
+          `;
+          metricsContainer.innerHTML = headerHtml;
+
+          // Display results
+          if (model === 'all') {
+            showToast('✅ All models tested successfully!', 'success');
+            let successCount = 0;
+
+            for (const [modelName, modelResult] of Object.entries(result)) {
+              if (modelResult.error) {
+                showToast(`${modelName}: ${modelResult.error}`, 'error');
+                continue;
+              }
+
+              if (modelResult.metrics) {
+                displayMetrics(modelResult.metrics, 'testMetricsDisplay', modelName);
+                successCount++;
+              }
+
+              // Display predictions in a professional card
+              if (modelResult.predictions) {
+                const predsHtml = `
+                  <div class="layer3-predictions-card">
+                    <div class="layer3-predictions-header">
+                      <span class="layer3-pred-icon">${getModelIcon(modelName)}</span>
+                      <h4>${formatModelName(modelName)}</h4>
+                    </div>
+                    <div class="layer3-predictions-content">
+                      <div class="layer3-predictions-sample">
+                        <strong>Sample Predictions:</strong>
+                        <div class="layer3-predictions-values">
+                          ${modelResult.predictions.slice(0, 10).map((p, i) =>
+                  `<span class="layer3-pred-badge">${i + 1}: ${p}</span>`
+                ).join('')}
+                          ${modelResult.predictions.length > 10 ? '<span class="layer3-pred-more">...</span>' : ''}
+                        </div>
+                      </div>
+                      <div class="layer3-predictions-stats">
+                        <span class="layer3-stat-item">📊 Total: <strong>${modelResult.predictions.length}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+                predsContainer.innerHTML += predsHtml;
+              }
+            }
+
+            // Update header with count
+            if (successCount > 0) {
+              metricsContainer.querySelector('.layer3-results-header p').textContent =
+                `${successCount} models tested successfully`;
+            }
+          } else {
+            showToast(`✅ ${model} tested successfully!`, 'success');
+
+            if (result.metrics) {
+              displayMetrics(result.metrics, 'testMetricsDisplay', model);
+            }
+
+            // Display predictions
+            if (result.predictions) {
+              const predsHtml = `
+                <div class="layer3-predictions-card">
+                  <div class="layer3-predictions-header">
+                    <span class="layer3-pred-icon">${getModelIcon(model)}</span>
+                    <h4>Predictions</h4>
+                  </div>
+                  <div class="layer3-predictions-content">
+                    <div class="layer3-predictions-sample">
+                      <strong>Sample Predictions:</strong>
+                      <div class="layer3-predictions-values">
+                        ${result.predictions.slice(0, 10).map((p, i) =>
+                `<span class="layer3-pred-badge">${i + 1}: ${p}</span>`
+              ).join('')}
+                        ${result.predictions.length > 10 ? '<span class="layer3-pred-more">...</span>' : ''}
+                      </div>
+                    </div>
+                    <div class="layer3-predictions-stats">
+                      <span class="layer3-stat-item">📊 Total: <strong>${result.predictions.length}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              `;
+              predsContainer.innerHTML = predsHtml;
+            }
+          }
+        } else {
+          showToast(`Testing failed: ${result.error || 'Unknown error'}`, 'error');
+          document.getElementById('testMetricsDisplay').innerHTML = `<p style="color:red;">${result.error}</p>`;
+        }
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+        document.getElementById('testMetricsDisplay').innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+      }
+    }
   </script>
 </body>
+
 </html>

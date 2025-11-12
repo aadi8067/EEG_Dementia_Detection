@@ -3,8 +3,11 @@ import os
 import uuid
 import json
 import io
+import pandas as pd
+import joblib
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from validation import validate_eeg_file, validate_metadata_file
 from storage import ensure_user_dirs, USER_BASE_DIR
 from metadata import extract_metadata, preview_metadata
@@ -348,6 +351,11 @@ def ui_home():
     """Frontend UI for uploading metadata, EEG type, and EEG files"""
     return render_template('index.html')
 
+@app.route('/')
+def home_redirect():
+    """Redirect root to UI"""
+    return render_template('index.html')
+
 # --- Layer2 Filter Integration ---
 @app.route('/filters', methods=['GET'])
 def get_filters():
@@ -391,6 +399,366 @@ def apply_filter():
             
     except Exception as e:
         return jsonify({"error": f"Filter processing failed: {str(e)}"}), 500
+
+# --- Layer3 ML Model Integration (Direct) ---
+from layer3_core import (
+    get_user_checkpoint_dir, compute_test_size, prep_features,
+    classification_metrics, regression_metrics,
+    run_logistic, run_linear, run_rf_classifier, run_rf_regressor,
+    run_dt_regressor, run_knn, run_svm
+)
+
+@app.route('/train_ml_model', methods=['POST'])
+def train_ml_model():
+    """Train ML models directly (Layer3 integrated)"""
+    
+    models = {
+        "logistic": run_logistic,
+        "linear": run_linear,
+        "rf_classifier": run_rf_classifier,
+        "rf_regressor": run_rf_regressor,
+        "dt_regressor": run_dt_regressor,
+        "knn": run_knn,
+        "svm": run_svm,
+    }
+    
+    try:
+        data = request.json.get("data")
+        model_name = request.json.get("model")
+        target_column = request.json.get("target_column", "Label")
+        train_percent = request.json.get("train_percent")
+        test_percent = request.json.get("test_percent")
+        random_state = int(request.json.get("random_state", 42))
+        user_id = request.json.get("user_id")
+        
+        if not user_id:
+            return jsonify({"error": "Missing required parameter: user_id"}), 400
+        
+        if train_percent is None or test_percent is None:
+            return jsonify({"error": "Both 'train_percent' and 'test_percent' must be provided and sum to 100."}), 400
+        
+        try:
+            train_percent = float(train_percent)
+            test_percent = float(test_percent)
+        except Exception:
+            return jsonify({"error": "'train_percent' and 'test_percent' must be numbers."}), 400
+        
+        if abs((train_percent + test_percent) - 100) > 1e-6:
+            return jsonify({"error": "'train_percent' and 'test_percent' must sum to 100."}), 400
+        
+        if not data or not isinstance(data, list):
+            return jsonify({"error": "Invalid or missing 'data'. Expected a JSON array."}), 400
+        
+        df = pd.DataFrame(data)
+        
+        if target_column not in df.columns:
+            return jsonify({"error": f"Target column '{target_column}' not found."}), 400
+        
+        regression_models = {"linear", "rf_regressor", "dt_regressor"}
+        classification_models = {"logistic", "rf_classifier", "knn", "svm"}
+        
+        # Check if target is numeric
+        is_numeric_target = pd.api.types.is_numeric_dtype(df[target_column])
+        
+        # If specific regression model selected with non-numeric target, return error
+        if model_name in regression_models and not is_numeric_target:
+            return jsonify({
+                "error": f"'{model_name}' is a regression model and requires numeric target values.",
+                "suggestion": "Please use classification models (Logistic, Random Forest Classifier, KNN, or SVM) for text labels, or select 'All Models' to automatically skip regression models."
+            }), 400
+        
+        X, y = prep_features(df, target_column)
+        test_size = compute_test_size(train_percent, test_percent)
+        
+        if len(y) * test_size < len(set(y)):
+            test_size = len(set(y)) / len(y)
+        
+        if model_name == "all":
+            results = {}
+            skipped_models = []
+            
+            for name, func in models.items():
+                try:
+                    # Skip regression models if target is not numeric
+                    if name in regression_models and not is_numeric_target:
+                        skipped_models.append(name)
+                        results[name] = {
+                            "skipped": True,
+                            "reason": "Regression model requires numeric target",
+                            "message": f"Skipped {name} (text labels detected)"
+                        }
+                        continue
+                    
+                    results[name] = func(X, y, test_size, random_state, user_id)
+                except Exception as e:
+                    results[name] = {"error": str(e)}
+            
+            # Add summary message
+            if skipped_models:
+                results["_summary"] = {
+                    "total_models": len(models),
+                    "trained": len(models) - len(skipped_models),
+                    "skipped": len(skipped_models),
+                    "skipped_models": skipped_models,
+                    "reason": "Text labels detected - only classification models were trained"
+                }
+            
+            return jsonify(results)
+        
+        if model_name not in models:
+            return jsonify({"error": f"Invalid model name '{model_name}'. Available models: {list(models.keys())}"}), 400
+        
+        result = models[model_name](X, y, test_size, random_state, user_id)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test_ml_model', methods=['POST'])
+def test_ml_model():
+    """Test ML models directly (Layer3 integrated)"""
+    
+    checkpoints = {
+        "logistic": "logistic_model.pkl",
+        "linear": "linear_model.pkl",
+        "rf_classifier": "rf_classifier_model.pkl",
+        "rf_regressor": "rf_regressor_model.pkl",
+        "dt_regressor": "dt_regressor_model.pkl",
+        "knn": "knn_model.pkl",
+        "svm": "svm_model.pkl",
+    }
+    
+    try:
+        data = request.json.get("data")
+        model_name = request.json.get("model")
+        target_column = request.json.get("target_column", "Label")
+        user_id = request.json.get("user_id")
+        
+        if not user_id:
+            return jsonify({"error": "Missing required parameter: user_id"}), 400
+        
+        if not data or not isinstance(data, list):
+            return jsonify({"error": "Invalid or missing 'data'. Expected a JSON array."}), 400
+        
+        if model_name == "all":
+            results = {}
+            skipped_models = []
+            
+            for name, checkpoint_file in checkpoints.items():
+                try:
+                    checkpoint_dir = get_user_checkpoint_dir(user_id)
+                    checkpoint_path = os.path.join(checkpoint_dir, checkpoint_file)
+                    
+                    # Skip models that weren't trained (no checkpoint)
+                    if not os.path.exists(checkpoint_path):
+                        skipped_models.append(name)
+                        results[name] = {
+                            "skipped": True,
+                            "reason": "Model not trained",
+                            "message": f"Skipped {name} (no checkpoint found)"
+                        }
+                        continue
+                    
+                    df = pd.DataFrame(data)
+                    has_target = target_column in df.columns
+                    
+                    regression_models = {"linear", "rf_regressor", "dt_regressor"}
+                    if name in regression_models and has_target:
+                        if not pd.api.types.is_numeric_dtype(df[target_column]):
+                            results[name] = {"error": "Regression models require the target value to be numeric only."}
+                            continue
+                    
+                    if has_target:
+                        X = df.drop(columns=[target_column])
+                        y_true = df[target_column]
+                        X = pd.get_dummies(X, drop_first=True)
+                        valid = X.notna().all(axis=1) & y_true.notna()
+                        X = X.loc[valid]
+                        y_true = y_true.loc[valid]
+                    else:
+                        X = pd.get_dummies(df, drop_first=True)
+                        valid = X.notna().all(axis=1)
+                        X = X.loc[valid]
+                        y_true = None
+                    
+                    checkpoint = joblib.load(checkpoint_path)
+                    model = checkpoint["model"]
+                    classes = checkpoint.get("classes")
+                    
+                    if hasattr(model, "feature_names_in_"):
+                        missing_cols = set(model.feature_names_in_) - set(X.columns)
+                        for col in missing_cols:
+                            X[col] = 0
+                        X = X[model.feature_names_in_]
+                    
+                    if name in ["logistic", "rf_classifier", "knn", "svm"]:
+                        if has_target and classes is not None:
+                            le = LabelEncoder()
+                            le.classes_ = classes
+                            y_true_enc = le.transform(y_true.astype(str))
+                        else:
+                            y_true_enc = None
+                        
+                        if name == "svm":
+                            scaler = StandardScaler()
+                            X = scaler.fit_transform(X)
+                        
+                        y_pred = model.predict(X)
+                        
+                        if classes is not None:
+                            predictions = [str(classes[p]) for p in y_pred]
+                        else:
+                            predictions = [int(x) if hasattr(x, 'item') else x for x in y_pred]
+                        
+                        result = {
+                            "task": "classification",
+                            "model": name,
+                            "predictions": predictions,
+                            "target_classes": [str(c) for c in classes] if classes is not None else None,
+                            "details": {
+                                "test_count": int(len(X)),
+                                "checkpoint": str(checkpoint_path)
+                            }
+                        }
+                        
+                        if has_target:
+                            metrics = {k: float(v) if hasattr(v, 'item') else v for k, v in classification_metrics(y_true_enc, y_pred).items()}
+                            result["metrics"] = metrics
+                        
+                        results[name] = result
+                    else:
+                        y_pred = model.predict(X)
+                        predictions = [float(x) if hasattr(x, 'item') else x for x in y_pred]
+                        
+                        result = {
+                            "task": "regression",
+                            "model": name,
+                            "predictions": predictions,
+                            "details": {
+                                "test_count": int(len(X)),
+                                "checkpoint": str(checkpoint_path)
+                            }
+                        }
+                        
+                        if has_target:
+                            metrics = {k: float(v) if hasattr(v, 'item') else v for k, v in regression_metrics(y_true, y_pred).items()}
+                            result["metrics"] = metrics
+                        
+                        results[name] = result
+                        
+                except Exception as e:
+                    results[name] = {"error": str(e)}
+            
+            # Add summary message
+            tested_count = len([r for r in results.values() if not r.get('skipped') and not r.get('error')])
+            if skipped_models:
+                results["_summary"] = {
+                    "total_models": len(checkpoints),
+                    "tested": tested_count,
+                    "skipped": len(skipped_models),
+                    "skipped_models": skipped_models,
+                    "reason": "Models not trained or incompatible with data"
+                }
+            
+            return jsonify(results)
+        
+        if model_name not in checkpoints:
+            return jsonify({"error": f"Invalid model name '{model_name}'. Available models: {list(checkpoints.keys()) + ['all']}"}), 400
+        
+        df = pd.DataFrame(data)
+        has_target = target_column in df.columns
+        
+        regression_models = {"linear", "rf_regressor", "dt_regressor"}
+        if model_name in regression_models and has_target:
+            if not pd.api.types.is_numeric_dtype(df[target_column]):
+                return jsonify({"error": "Regression models require the target value to be numeric only."}), 400
+        
+        if has_target:
+            X = df.drop(columns=[target_column])
+            y_true = df[target_column]
+            X = pd.get_dummies(X, drop_first=True)
+            valid = X.notna().all(axis=1) & y_true.notna()
+            X = X.loc[valid]
+            y_true = y_true.loc[valid]
+        else:
+            X = pd.get_dummies(df, drop_first=True)
+            valid = X.notna().all(axis=1)
+            X = X.loc[valid]
+            y_true = None
+        
+        checkpoint_dir = get_user_checkpoint_dir(user_id)
+        checkpoint_path = os.path.join(checkpoint_dir, checkpoints[model_name])
+        
+        if not os.path.exists(checkpoint_path):
+            return jsonify({"error": f"Checkpoint for model '{model_name}' not found. Please train the model first."}), 400
+        
+        checkpoint = joblib.load(checkpoint_path)
+        model = checkpoint["model"]
+        classes = checkpoint.get("classes")
+        
+        if hasattr(model, "feature_names_in_"):
+            missing_cols = set(model.feature_names_in_) - set(X.columns)
+            for col in missing_cols:
+                X[col] = 0
+            X = X[model.feature_names_in_]
+        
+        if model_name in ["logistic", "rf_classifier", "knn", "svm"]:
+            if has_target and classes is not None:
+                le = LabelEncoder()
+                le.classes_ = classes
+                y_true_enc = le.transform(y_true.astype(str))
+            else:
+                y_true_enc = None
+            
+            if model_name == "svm":
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+            
+            y_pred = model.predict(X)
+            
+            if classes is not None:
+                predictions = [str(classes[p]) for p in y_pred]
+            else:
+                predictions = [int(x) if hasattr(x, 'item') else x for x in y_pred]
+            
+            result = {
+                "task": "classification",
+                "model": model_name,
+                "predictions": predictions,
+                "target_classes": [str(c) for c in classes] if classes is not None else None,
+                "details": {
+                    "test_count": int(len(X)),
+                    "checkpoint": str(checkpoint_path)
+                }
+            }
+            
+            if has_target:
+                metrics = {k: float(v) if hasattr(v, 'item') else v for k, v in classification_metrics(y_true_enc, y_pred).items()}
+                result["metrics"] = metrics
+            
+            return jsonify(result)
+        else:
+            y_pred = model.predict(X)
+            predictions = [float(x) if hasattr(x, 'item') else x for x in y_pred]
+            
+            result = {
+                "task": "regression",
+                "model": model_name,
+                "predictions": predictions,
+                "details": {
+                    "test_count": int(len(X)),
+                    "checkpoint": str(checkpoint_path)
+                }
+            }
+            
+            if has_target:
+                metrics = {k: float(v) if hasattr(v, 'item') else v for k, v in regression_metrics(y_true, y_pred).items()}
+                result["metrics"] = metrics
+            
+            return jsonify(result)
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     print("Starting Flask EEG server...")
