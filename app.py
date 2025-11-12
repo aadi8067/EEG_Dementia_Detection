@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 import uuid
 import json
+import io
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from validation import validate_eeg_file, validate_metadata_file
@@ -339,11 +340,57 @@ def hardware_register():
     }
 
 from flask import render_template
+from flask import render_template, send_file
+import requests
 
 @app.route('/ui')
 def ui_home():
     """Frontend UI for uploading metadata, EEG type, and EEG files"""
     return render_template('index.html')
+
+# --- Layer2 Filter Integration ---
+@app.route('/filters', methods=['GET'])
+def get_filters():
+    """Proxy to Layer2 to get available filters"""
+    try:
+        response = requests.get('http://127.0.0.1:5001/filters')
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": f"Layer2 service unavailable: {str(e)}"}), 503
+
+@app.route('/apply_filter', methods=['POST'])
+def apply_filter():
+    """Proxy to Layer2 to apply filters to uploaded CSV/XLSX files"""
+    try:
+        if 'data' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['data']
+        filters = request.form.get('filters', 'all')
+        
+        # Forward request to Layer2
+        files = {'data': (file.filename, file.stream, file.content_type)}
+        data = {'filters': filters}
+        
+        response = requests.post(
+            'http://127.0.0.1:5001/apply_filter',
+            files=files,
+            data=data
+        )
+        
+        if response.status_code == 200:
+            # Return the processed file
+            return send_file(
+                io.BytesIO(response.content),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'processed_{filters}.csv'
+            )
+        else:
+            return jsonify(response.json()), response.status_code
+            
+    except Exception as e:
+        return jsonify({"error": f"Filter processing failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
     print("Starting Flask EEG server...")

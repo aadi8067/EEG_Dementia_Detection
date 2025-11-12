@@ -98,6 +98,43 @@
       <button type="submit" class="btn">Upload EEG Files</button>
     </form>
     <pre id="eegOutput"></pre>
+
+    <hr>
+
+    <!-- Filter Processing Section (Layer2) -->
+    <h2 style="margin-top: 40px;">Apply Filters to EEG Data</h2>
+    <form id="filterForm" enctype="multipart/form-data">
+      <label>Upload CSV or XLSX File:</label>
+      <input type="file" id="filter_file" name="data" accept=".csv,.xlsx" required />
+      
+      <label>Select Filter(s):</label>
+      <div class="custom-dropdown">
+        <div class="dropdown-header" id="filterDropdownHeader">
+          <span id="filterDropdownText">Apply All Filters</span>
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        <div class="dropdown-content" id="filterDropdownContent">
+          <label class="dropdown-item">
+            <input type="checkbox" name="filter" value="all" id="all_filters" checked /> Apply All Filters
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" name="filter" value="wavelet" /> Wavelet Denoising
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" name="filter" value="savgol" /> Savitzky-Golay Smoothing
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" name="filter" value="median_bandpass" /> Median Bandpass Filter
+          </label>
+          <label class="dropdown-item">
+            <input type="checkbox" name="filter" value="notch" /> Notch Filter (60Hz)
+          </label>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn">Process & Download</button>
+    </form>
+    <pre id="filterOutput"></pre>
   </section>
 
   <!-- Contact -->
@@ -152,6 +189,106 @@
       const res = await fetch(`/eegs/${userId}`, { method: 'POST', body: formData });
       const data = await res.json();
       document.getElementById('eegOutput').textContent = JSON.stringify(data, null, 2);
+    };
+
+    // Handle Custom Dropdown Toggle
+    const dropdownHeader = document.getElementById('filterDropdownHeader');
+    const dropdownContent = document.getElementById('filterDropdownContent');
+    
+    dropdownHeader.addEventListener('click', () => {
+      dropdownContent.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.custom-dropdown')) {
+        dropdownContent.classList.remove('show');
+      }
+    });
+
+    // Handle "Apply All Filters" checkbox
+    document.getElementById('all_filters').addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('input[name="filter"]:not(#all_filters)');
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        cb.disabled = e.target.checked;
+      });
+      updateDropdownText();
+    });
+
+    // Update dropdown text when checkboxes change
+    document.querySelectorAll('input[name="filter"]').forEach(checkbox => {
+      checkbox.addEventListener('change', updateDropdownText);
+    });
+
+    function updateDropdownText() {
+      const allFilters = document.getElementById('all_filters');
+      const checkboxes = document.querySelectorAll('input[name="filter"]:checked:not(#all_filters)');
+      const text = document.getElementById('filterDropdownText');
+      
+      if (allFilters.checked) {
+        text.textContent = 'Apply All Filters';
+      } else if (checkboxes.length === 0) {
+        text.textContent = 'Select Filters';
+      } else if (checkboxes.length === 1) {
+        text.textContent = checkboxes[0].parentElement.textContent.trim();
+      } else {
+        text.textContent = `${checkboxes.length} Filters Selected`;
+      }
+    }
+
+    // Handle Filter Processing
+    document.getElementById('filterForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      const file = document.getElementById('filter_file').files[0];
+      if (!file) {
+        alert('Please select a file');
+        return;
+      }
+
+      // Get selected filters from checkboxes
+      const checkboxes = document.querySelectorAll('input[name="filter"]:checked');
+      const selectedFilters = Array.from(checkboxes).map(cb => cb.value);
+      
+      // If "all" is selected or nothing selected, use "all"
+      let filters = 'all';
+      if (selectedFilters.length > 0 && !selectedFilters.includes('all')) {
+        filters = selectedFilters.join(',');
+      }
+
+      const formData = new FormData();
+      formData.append('data', file);
+      formData.append('filters', filters);
+
+      try {
+        document.getElementById('filterOutput').textContent = 'Processing... Please wait.';
+        
+        const res = await fetch('/apply_filter', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          // Download the processed file
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `processed_${filters}_${Date.now()}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          
+          document.getElementById('filterOutput').textContent = 'Success! File downloaded.';
+        } else {
+          const error = await res.json();
+          document.getElementById('filterOutput').textContent = 'Error: ' + JSON.stringify(error, null, 2);
+        }
+      } catch (error) {
+        document.getElementById('filterOutput').textContent = 'Error: ' + error.message;
+      }
     };
   </script>
 </body>

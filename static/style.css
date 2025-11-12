@@ -132,6 +132,7 @@ nav a.active {
 .upload {
   padding: 70px 50px;
   background: #f9fafb;
+  overflow: visible;
 }
 
 .upload h2 {
@@ -148,6 +149,8 @@ form {
   width: 80%;
   max-width: 600px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: visible;
 }
 
 form label {
@@ -188,6 +191,92 @@ pre {
 
 .contact form {
   margin-top: 20px;
+}
+
+/* Filter Section - Custom Dropdown */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.dropdown-header {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.3s;
+}
+
+.dropdown-header:hover {
+  border-color: #6366f1;
+}
+
+.dropdown-arrow {
+  font-size: 12px;
+  transition: transform 0.3s;
+}
+
+.dropdown-content.show .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, border 0.3s ease;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-content.show {
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-weight: 400;
+  margin-bottom: 0;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+  margin-bottom: 0;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.dropdown-item input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 40px 0;
 }
 
 /* Footer */

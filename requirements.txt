@@ -9,3 +9,10 @@ opencv-python
 requests
 werkzeug
 gunicorn
+torch
+scipy
+pywavelets
+mne
+openpyxl
+pyyaml
+xmltodict
